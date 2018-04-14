@@ -37,7 +37,6 @@ double polyeval(Eigen::VectorXd coeffs, double x) {
   double result = 0.0;
   for (int i = 0; i < coeffs.size(); i++) {    
     result += coeffs[i] * pow(x, i);
-    std::cout << "Looping coeffs result:" << result << std::endl;
   }
   return result;
 }
@@ -49,9 +48,7 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
                         int order) {
   assert(xvals.size() == yvals.size());
   assert(order >= 1 && order <= xvals.size() - 1);
-  
-  
-  
+    
   Eigen::MatrixXd A(xvals.size(), order + 1);
 
   for (int i = 0; i < xvals.size(); i++) {
@@ -61,8 +58,6 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   for (int j = 0; j < xvals.size(); j++) {
     for (int i = 0; i < order; i++) {
       A(j, i + 1) = A(j, i) * xvals(j);
-      std::cout << "yvals " << yvals(j) << std::endl;
-      std::cout << "xvals " << xvals(j) << std::endl;
     }
   }
 
@@ -93,8 +88,8 @@ int main() {
         if (event == "telemetry") {
 
           //j[1] is the data JSON object
-          vector<double> ptsx = j[1]["ptsx"];
-          vector<double> ptsy = j[1]["ptsy"];
+          vector<double> waypoints_x = j[1]["ptsx"]; // six waypoints ahead for x and y as given by the simulator 
+          vector<double> waypoints_y = j[1]["ptsy"];
           double px = j[1]["x"];
           double py = j[1]["y"];
           double psi = j[1]["psi"];
@@ -103,49 +98,50 @@ int main() {
 	  double a = j[1]["throttle"];
 	  
 	  // Initialize eigenvectors for polyfit
-          Eigen::VectorXd ptsx_transformed(ptsx.size());
-	  Eigen::VectorXd ptsy_transformed(ptsy.size());
-	  
-	  for (int i = 0;i < ptsx.size();i++){
-	    double shift_x = ptsx[i]-px;
-	    double shift_y = ptsy[i]-py;
+          Eigen::VectorXd waypoints_x_relative(waypoints_x.size());
+	  Eigen::VectorXd waypoints_y_relative(waypoints_y.size());
 
-	    ptsx_transformed[i] = shift_x * cos(0-psi) - shift_y * sin(0-psi);
-	    ptsy_transformed[i] = shift_x * sin(0-psi) + shift_y * cos(0--psi);
+	  // tranform the original waypoints to match the car's position for simplification
+	  for (int i = 0;i < waypoints_x.size();i++){
+
+	    // shift waypoints to the car's positions to make x and y zero
+	    double shift_in_x = waypoints_x[i] - px;
+	    double shift_in_y = waypoints_y[i] - py;
 	    
+	    // shift waypoints to the car's positions to make psi zero 
+	    waypoints_x_relative[i] = shift_in_x * cos(0-psi) - shift_in_y * sin(0-psi);
+	    waypoints_y_relative[i] = shift_in_x * sin(0-psi) + shift_in_y * cos(0-psi);	    
 	  }
 	  
-	  auto coeffs = polyfit(ptsx_car,ptsy_car,3); // third order polynomial	  
-	  // calculate cte and epsi
-	  double cte = polyeval(coeffs,0);
-	  double epsi = -atan(coeffs[1]);
+	  auto coeffs = polyfit(waypoints_x_relative, waypoints_y_relative,3); // fit a third order polynomial
 	  
-	  const double Lf = 2.67;
-	  // Latency for predicting time at actuation
+	  double cte = polyeval(coeffs,0);
+	  double epsi = -atan(coeffs[1]);	 
 
+	  const double Lf = 2.67;	  
 	  const double dt = 0.1;
-          // Predict state after latency
-
+	  // use the kinematic model equtions to predict the next state as specified lesson 19.5
           // x, y and psi are all zero after transformation above
-          double pred_px = 0.0 + v * dt; // Since psi is zero, cos(0) = 1, can leave out
-          double pred_py = 0.0; // Since sin(0) = 0, y stays as 0 (y + v * 0 * dt)
-          double pred_psi = 0.0 + v * -delta / Lf * dt;
+	  
+          double pred_px = 0.0 + v * dt; // psi is zero so cos(0) = 1
+          double pred_py = 0.0; // psi is zero so, y = 0
+          double pred_psi = 0.0 - v * delta/Lf * dt;
           double pred_v = v + a * dt;
-          double pred_cte = cte + v * sin(epsi) * dt;
-          double pred_epsi = epsi + v * -delta / Lf * dt;
+          double pred_cte = cte + v * sin(epsi)*dt;
+          double pred_epsi = epsi - v * delta/Lf * dt;
 	  
 	  Eigen::VectorXd state(6);
+	  //state << pred_px, pred_py, pred_psi, pred_v, pred_cte, pred_epsi;
 	  state << pred_px, pred_py, pred_psi, pred_v, pred_cte, pred_epsi;
-	  
 	  auto vars = mpc.Solve(state,coeffs);
 
 	  vector<double> next_x_vals;
 	  vector<double> next_y_vals;
 	  
-	  double poly_inc = 2.5;
+	  double poly_inc = 2.5; // separation between points in the yellow line
 	  int num_points = 25;
 
-	  for (int i = 1; i< num_points;i++){	    
+	  for (int i = 0; i< num_points;i++){	    
 	    next_x_vals.push_back(poly_inc*i);
 	    next_y_vals.push_back(polyeval(coeffs,poly_inc*i));	    
 	  }
