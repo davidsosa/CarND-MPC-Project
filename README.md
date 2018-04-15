@@ -39,17 +39,20 @@ Self-Driving Car Engineer Nanodegree Program
 4. Run it: `./mpc`.
 
 
-## Background of the project
+## Background and Explanation of the Project
 
 For this project we apply the a kinematic model (as opposed to a more complicated dynamic model), where
-the actuators are only the acceleration and the steering.
+the actuators are only the acceleration and the steering. The kinematic model equations are the following:
 
-The kinematic model equations are the following:
-
+```
 x(t+1) = x(t) + v(t)cos(psi(t)) * dt
+
 y(t+1) = y(t) + v(t)sin(psi(t)) * dt
+
 psi(t+1) = psi + vt/Lf * delta(t) * dt
+
 v(t+1) = v(t) = v(t) + a(t) * dt,
+```
 
 where delta and a are the actuators steering and acceleration and Lf is the measurement
 of the distnce between the center of mass of the vehicle and it's front axle. The larger its value
@@ -75,8 +78,10 @@ therefore:
 
 cte(t) = y(t) - f(x) + v(t)*sin(epsi)*dt
 
-The orientation error is given by, 
+The orientation error is given by,
+
 epsi(t+1) = epsi(t) + vt/Lf * delta(t) * dt
+
 The current epsi(t) is the difference of the current psi and the desired psi.
 
 Additionally the steering and the acceleration and their changes are also minimized in the
@@ -94,7 +99,7 @@ const int weight_delta_change = 100; // avoid abrut steering changes
 const int weight_acc_change = 1;    
 ```
 
-These values were tuned manully with principles that the cte and epsi weights should not be too different.
-And also knowing that the values for acceleration, change in acceleration and velocity are not that important
-for our goal of completing the track. With these weight the car was able to complete 3 laps at a reference
+These values were tuned manually with principles that the cte and epsi weights should not be too different.
+And also knowing that the values for acceleration, change in acceleration and velocity are not important
+for our goal of completing the track. With these weights the car was able to complete 3 laps at a reference
 velocity of 80. 
