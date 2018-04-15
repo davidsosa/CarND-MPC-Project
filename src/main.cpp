@@ -94,7 +94,11 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
-	  double delta = j[1]["steering_angle"];
+	  // Important minus sign. In the simulator, "left" is negative and "right" is positive,
+	  // while psi is measured the other way around, i.e. "left" is negative. From:
+	  // https://discussions.udacity.com/t/here-is-some-advice-about-steering-values/276487	  
+	  double delta = j[1]["steering_angle"]; 
+	  delta = -delta;
 	  double a = j[1]["throttle"];
 	  
 	  // Initialize eigenvectors for polyfit
@@ -114,21 +118,24 @@ int main() {
 	  }
 	  
 	  auto coeffs = polyfit(waypoints_x_relative, waypoints_y_relative,3); // fit a third order polynomial
+
+	  //cte = f(x) - y y = 0
+	  //epsi = psi - f'(x) psi = 0
 	  
 	  double cte = polyeval(coeffs,0);
 	  double epsi = -atan(coeffs[1]);	 
 
 	  const double Lf = 2.67;	  
-	  const double dt = 0.1;
+	  const double latency = 0.1;
 	  // use the kinematic model equtions to predict the next state as specified lesson 19.5
           // x, y and psi are all zero after transformation above
 	  
-          double pred_px = 0.0 + v * dt; // psi is zero so cos(0) = 1
+          double pred_px = 0.0 + v * latency; // psi is zero so cos(0) = 1
           double pred_py = 0.0; // psi is zero so, y = 0
-          double pred_psi = 0.0 - v * delta/Lf * dt;
-          double pred_v = v + a * dt;
-          double pred_cte = cte + v * sin(epsi)*dt;
-          double pred_epsi = epsi - v * delta/Lf * dt;
+          double pred_psi = 0.0 + v * delta/Lf * latency;
+          double pred_v = v + a * latency;
+          double pred_cte = cte + v * sin(epsi)*latency;
+          double pred_epsi = epsi + v * delta/Lf * latency;
 	  
 	  Eigen::VectorXd state(6);
 	  //state << pred_px, pred_py, pred_psi, pred_v, pred_cte, pred_epsi;
@@ -141,7 +148,7 @@ int main() {
 	  double poly_inc = 2.5; // separation between points in the yellow line
 	  int num_points = 25;
 
-	  for (int i = 0; i< num_points;i++){	    
+	  for (int i = 1; i< num_points;i++){	    
 	    next_x_vals.push_back(poly_inc*i);
 	    next_y_vals.push_back(polyeval(coeffs,poly_inc*i));	    
 	  }

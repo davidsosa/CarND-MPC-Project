@@ -52,10 +52,18 @@ psi(t+1) = psi + vt/Lf * delta(t) * dt
 v(t+1) = v(t) = v(t) + a(t) * dt,
 
 where delta and a are the actuators steering and acceleration and Lf is the measurement
-of the distnce between the center of mass of the vehicle and it's front axle. The larger
+of the distnce between the center of mass of the vehicle and it's front axle. The larger its value
 the vehicle, the slower the turn rate. The value is already specified for the project. 
 
-Errors to minimize
+The variable dt can be thought of as the latency or the time it takes the input from
+the actuators to manouver the car. This is implemented in the file main.cpp. The variable
+N specifies how far we are going to "look" in the road. The values chosen for these variables
+were N=10 and dt=0.1.
+
+Different values of dt were tested: for examples values for dt of 0.2 and 0.5 showed that the car was
+"too careful" have a lot of unjustified braking. Lower values,(dt=0.05) gave the car lots of jitter. 
+
+The errors to minimize are the following:
 
 Cross track error:
 
@@ -67,19 +75,26 @@ therefore:
 
 cte(t) = y(t) - f(x) + v(t)*sin(epsi)*dt
 
-
 The orientation error is given by, 
 epsi(t+1) = epsi(t) + vt/Lf * delta(t) * dt
 The current epsi(t) is the difference of the current psi and the desired psi.
 
+Additionally the steering and the acceleration and their changes are also minimized in the
+file MPC.cpp. It is possible to assign weights to these factors to indicate to the optimization
+engine the importance of each error. The following factors were chosen:
 
+```
+// parameters work for 3 laps at 80
+const int weight_cte = 2200;
+const int weight_epsi = 2000;
+const int weight_vel = 1;
+const int weight_delta = 10;
+const int weight_acc = 1;
+const int weight_delta_change = 100; // avoid abrut steering changes
+const int weight_acc_change = 1;    
+```
 
-
-## First task
-
-Extract the values from the json files. 
-
-
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+These values were tuned manully with principles that the cte and epsi weights should not be too different.
+And also knowing that the values for acceleration, change in acceleration and velocity are not that important
+for our goal of completing the track. With these weight the car was able to complete 3 laps at a reference
+velocity of 80. 
